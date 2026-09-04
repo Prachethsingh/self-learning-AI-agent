@@ -26,13 +26,13 @@ const FREE_LLM_PRESETS = [
   },
   {
     id: 'groq',
-    name: '🚀 Groq Cloud (Free & Ultra-Fast Llama 3.3 70B)',
+    name: '🚀 Groq Cloud (Free & Ultra-Fast GPT-OSS 120B)',
     provider: 'openai',
-    model: 'llama-3.3-70b-versatile',
+    model: 'openai/gpt-oss-120b',
     baseUrl: 'https://api.groq.com/openai/v1',
     portalUrl: 'https://console.groq.com/keys',
     keyPlaceholder: 'gsk_...',
-    desc: 'Free tier with instant setup and ultra-low latency. Generates in < 1 second.'
+    desc: 'Free tier with instant setup and ultra-low latency (< 1s reasoning).'
   },
   {
     id: 'gemini',
