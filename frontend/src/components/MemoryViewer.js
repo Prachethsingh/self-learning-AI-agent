@@ -4,54 +4,79 @@ const MemoryViewer = ({ memoryStats }) => {
   if (!memoryStats) {
     return (
       <div className="card">
-        <h2>Memory Systems</h2>
-        <p>Loading...</p>
+        <h2>
+          <span>Memory Subsystems</span>
+          <span className="icon">💾</span>
+        </h2>
+        <div className="no-tasks-state">Loading memory architecture...</div>
       </div>
     );
   }
 
+  const shortTerm = memoryStats.short_term_memory || {};
+  const longTerm = memoryStats.long_term_memory || {};
+  const vector = memoryStats.vector_memory || {};
+
   return (
     <div className="card">
-      <h2>Memory Systems</h2>
-      <div className="memory-grid">
-        <div className="memory-section">
-          <h3>Short-Term Memory</h3>
-          <div className="memory-stats">
-            <div>
-              <h4>Active Items</h4>
-              <p>{memoryStats.short_term_memory?.active_items || 0}</p>
+      <h2>
+        <span>Memory Subsystems</span>
+        <span className="icon">🧠</span>
+      </h2>
+
+      <div className="memory-sections-grid">
+        {/* Short-Term Memory Tier */}
+        <div className="memory-tier-card">
+          <div className="tier-title">
+            <span>💾 Short-Term Working Buffer</span>
+            <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>RAM Cache</span>
+          </div>
+          <div className="tier-stat-row">
+            <div className="tier-stat-item">
+              <div className="num">{shortTerm.active_items || 0}</div>
+              <div className="label">Active Context Items</div>
             </div>
-            <div>
-              <h4>Total Items</h4>
-              <p>{memoryStats.short_term_memory?.total_items || 0}</p>
+            <div className="tier-stat-item">
+              <div className="num">{shortTerm.total_items || 0}</div>
+              <div className="label">Cumulative Buffer Items</div>
             </div>
           </div>
         </div>
 
-        <div className="memory-section">
-          <h3>Long-Term Memory</h3>
-          <div className="memory-stats">
-            <div>
-              <h4>Total Items</h4>
-              <p>{memoryStats.long_term_memory?.total_items || 0}</p>
+        {/* Long-Term Memory Tier */}
+        <div className="memory-tier-card">
+          <div className="tier-title">
+            <span>🗄️ Long-Term Relational Store</span>
+            <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>SQLite / Postgres</span>
+          </div>
+          <div className="tier-stat-row">
+            <div className="tier-stat-item">
+              <div className="num">{longTerm.total_items || 0}</div>
+              <div className="label">Persisted Records</div>
             </div>
-            <div>
-              <h4>Categories</h4>
-              <p>{Object.keys(memoryStats.long_term_memory?.categories || {}).length}</p>
+            <div className="tier-stat-item">
+              <div className="num">{Object.keys(longTerm.categories || {}).length}</div>
+              <div className="label">Memory Categories</div>
             </div>
           </div>
         </div>
 
-        <div className="memory-section">
-          <h3>Vector Memory</h3>
-          <div className="memory-stats">
-            <div>
-              <h4>Total Points</h4>
-              <p>{memoryStats.vector_memory?.total_points || 0}</p>
+        {/* Vector Memory Tier */}
+        <div className="memory-tier-card">
+          <div className="tier-title">
+            <span>🔮 Vector Semantic Space</span>
+            <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>all-MiniLM-L6-v2</span>
+          </div>
+          <div className="tier-stat-row">
+            <div className="tier-stat-item">
+              <div className="num">{vector.total_points || 0}</div>
+              <div className="label">Indexed Embeddings</div>
             </div>
-            <div>
-              <h4>Status</h4>
-              <p>{memoryStats.vector_memory?.status || 'unknown'}</p>
+            <div className="tier-stat-item">
+              <div className="num" style={{ color: '#10b981', fontSize: '1.1rem', textTransform: 'capitalize' }}>
+                {vector.status || 'Active'}
+              </div>
+              <div className="label">Qdrant Engine</div>
             </div>
           </div>
         </div>

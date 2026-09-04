@@ -141,38 +141,41 @@ class VectorMemory:
         # Generate query embedding
         query_embedding = self.embedding_model.encode(query)
 
-        # Search in Qdrant
-        search_result = self.client.search(
-            collection_name=self.collection_name,
-            query_vector=query_embedding.tolist(),
-            limit=limit,
-            score_threshold=score_threshold,
-            query_filter={
-                "must": [
-                    {
-                        "key": "importance",
-                        "range": {
-                            "gte": min_importance
-                        }
-                    }
-                ]
-            }
-        )
+        # Search in Qdrant (supports both modern query_points and legacy search)
+        try:
+            if hasattr(self.client, "query_points"):
+                response = self.client.query_points(
+                    collection_name=self.collection_name,
+                    query=query_embedding.tolist(),
+                    limit=limit,
+                    score_threshold=score_threshold
+                )
+                search_result = getattr(response, "points", response)
+            else:
+                search_result = self.client.search(
+                    collection_name=self.collection_name,
+                    query_vector=query_embedding.tolist(),
+                    limit=limit,
+                    score_threshold=score_threshold
+                )
+        except Exception as e:
+            logger.warning(f"Vector search failed: {e}")
+            search_result = []
 
         # Convert results to memory items
         results = []
         for hit in search_result:
-            payload = hit.payload
+            payload = getattr(hit, "payload", {}) or {}
             item = VectorMemoryItem(
-                id=hit.id,
-                content=payload["content"],
-                text_content=payload["text_content"],
-                embedding=hit.vector,
+                id=str(hit.id),
+                content=payload.get("content"),
+                text_content=payload.get("text_content", ""),
+                embedding=getattr(hit, "vector", None),
                 metadata=payload.get("metadata", {}),
                 importance=payload.get("importance", 0.5),
-                timestamp=datetime.fromisoformat(payload["timestamp"])
+                timestamp=datetime.fromisoformat(payload["timestamp"]) if "timestamp" in payload else datetime.now()
             )
-            results.append((item, hit.score))
+            results.append((item, getattr(hit, "score", 1.0)))
 
         return results
 
