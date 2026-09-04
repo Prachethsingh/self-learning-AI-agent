@@ -1,5 +1,4 @@
 # 🧠 Self-Learning AI Agent
-URL: https://self-learning-ai-agent-one.vercel.app
 
 <div align="center">
 
