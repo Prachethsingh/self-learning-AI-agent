@@ -84,12 +84,13 @@ async def execute_task(
         )
 
         # Create a task plan from the reasoning
-        # In a full implementation, this would be more sophisticated
+        next_act = reasoning_result.get("next_action", {})
+        tool_name = next_act.get("tool_name") or next_act.get("type", "reasoning")
         task_plan = [{
             "id": "main_task",
-            "tool_name": reasoning_result.get("next_action", {}).get("type", "reasoning"),
-            "parameters": reasoning_result.get("next_action", {}).get("parameters", {}),
-            "description": reasoning_result.get("next_action", {}).get("description", "")
+            "tool_name": tool_name,
+            "parameters": next_act.get("parameters", {}),
+            "description": next_act.get("description", "")
         }]
 
         # Execute the task
@@ -247,4 +248,72 @@ async def reset_agent():
 
     except Exception as e:
         logger.error(f"Error resetting agent: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ConfigUpdateRequest(BaseModel):
+    api_key: Optional[str] = None
+    provider: Optional[str] = None
+    model: Optional[str] = None
+
+
+@router.get("/config")
+async def get_agent_config():
+    """Get current LLM and agent configuration."""
+    try:
+        from api.main import app
+        from agent.brain import LLMProvider
+        cfg = app.state.llm_config
+        key = (cfg.api_key or "").strip()
+        has_key = bool(key and not key.startswith("your_"))
+        masked = ""
+        if has_key:
+            masked = key[:7] + "..." + key[-4:] if len(key) > 12 else "***"
+
+        provider_name = cfg.provider.value if hasattr(cfg.provider, "value") else str(cfg.provider)
+        return {
+            "provider": provider_name,
+            "model": cfg.model,
+            "has_api_key": has_key,
+            "masked_key": masked if has_key else None
+        }
+    except Exception as e:
+        logger.error(f"Error getting config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/config")
+async def update_agent_config(request: ConfigUpdateRequest):
+    """Update LLM provider, model, or API key dynamically."""
+    try:
+        import os
+        from api.main import app
+        from agent.brain import Brain, LLMProvider
+
+        cfg = app.state.llm_config
+
+        if request.provider:
+            try:
+                cfg.provider = LLMProvider(request.provider.lower())
+            except Exception:
+                pass
+
+        if request.model:
+            cfg.model = request.model.strip()
+
+        if request.api_key is not None:
+            clean_key = request.api_key.strip()
+            cfg.api_key = clean_key
+            if cfg.provider == LLMProvider.OPENAI:
+                os.environ["OPENAI_API_KEY"] = clean_key
+            elif cfg.provider == LLMProvider.ANTHROPIC:
+                os.environ["ANTHROPIC_API_KEY"] = clean_key
+
+        # Re-initialize Brain with the updated configuration
+        app.state.brain = Brain(cfg)
+        logger.info(f"Agent Brain re-initialized with provider={cfg.provider}, model={cfg.model}, has_key={bool(cfg.api_key)}")
+
+        return await get_agent_config()
+    except Exception as e:
+        logger.error(f"Error updating config: {e}")
         raise HTTPException(status_code=500, detail=str(e))

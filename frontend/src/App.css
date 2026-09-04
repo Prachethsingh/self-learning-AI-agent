@@ -205,6 +205,18 @@ body {
   transform: translateY(-1px);
 }
 
+.btn-header-action.badge-active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+
+.btn-header-action.badge-neutral {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: #a5b4fc;
+}
+
 /* Nav Tabs */
 .dashboard-tabs {
   display: flex;

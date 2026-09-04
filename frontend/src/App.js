@@ -19,20 +19,72 @@ function App() {
   const [memoryStats, setMemoryStats] = useState(null);
   const [learningStats, setLearningStats] = useState(null);
   
+  // LLM Config state
+  const [llmConfig, setLlmConfig] = useState({ provider: 'openai', model: 'gpt-4-turbo-preview', has_api_key: false });
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [providerInput, setProviderInput] = useState('openai');
+  const [modelInput, setModelInput] = useState('gpt-4-turbo-preview');
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+
   // Interactive Agent Console state
   const [prompt, setPrompt] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'console' | 'tasks' | 'memory'
+  const [activeTab, setActiveTab] = useState('overview');
 
   // WebSocket connection for real-time updates
   const { data: wsData, isConnected: wsConnected } = useWebSocket('ws://localhost:8000/ws');
+
+  const fetchConfig = async () => {
+    try {
+      const res = await fetch('/api/agent/config');
+      if (res.ok) {
+        const data = await res.json();
+        setLlmConfig(data);
+        setProviderInput(data.provider || 'openai');
+        setModelInput(data.model || 'gpt-4-turbo-preview');
+      }
+    } catch (e) {
+      console.warn('Config fetch error:', e);
+    }
+  };
+
+  const handleSaveConfig = async (e) => {
+    e.preventDefault();
+    setIsSavingConfig(true);
+    try {
+      const payload = {
+        provider: providerInput,
+        model: modelInput
+      };
+      if (apiKeyInput.trim()) {
+        payload.api_key = apiKeyInput.trim();
+      }
+      const res = await fetch('/api/agent/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setLlmConfig(updated);
+        setApiKeyInput('');
+        setShowConfigModal(false);
+      }
+    } catch (err) {
+      alert('Failed to save LLM configuration: ' + err.message);
+    } finally {
+      setIsSavingConfig(false);
+    }
+  };
 
   const fetchAllData = async () => {
     fetchAgentStatus();
     fetchTasks();
     fetchMemoryStats();
     fetchLearningStats();
+    fetchConfig();
   };
 
   useEffect(() => {
@@ -211,6 +263,16 @@ function App() {
         </div>
 
         <div className="header-actions">
+          <button
+            className={`btn-header-action ${llmConfig?.has_api_key ? 'badge-active' : 'badge-neutral'}`}
+            onClick={() => setShowConfigModal(true)}
+            title="Configure LLM Provider, Model & API Key"
+          >
+            <span>{llmConfig?.has_api_key ? '🟢' : '⚡'}</span>
+            <span>{llmConfig?.has_api_key ? `${llmConfig.model}` : 'Autonomous Mode'}</span>
+            <span style={{ fontSize: '0.72rem', opacity: 0.7 }}>⚙️</span>
+          </button>
+
           <span className={`ws-status ${wsConnected ? 'connected' : 'disconnected'}`}>
             <span className="pulse-dot"></span>
             {wsConnected ? 'WebSocket Live' : 'Live Sync Polling'}
@@ -225,6 +287,81 @@ function App() {
           </button>
         </div>
       </header>
+
+      {/* LLM Settings Modal */}
+      {showConfigModal && (
+        <div className="modal-backdrop" onClick={() => setShowConfigModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <h3>⚙️ AI Model & API Key Configuration</h3>
+              <button className="btn-close" onClick={() => setShowConfigModal(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveConfig} className="task-form">
+              <div className="form-group">
+                <label>Provider</label>
+                <select
+                  value={providerInput}
+                  onChange={(e) => setProviderInput(e.target.value)}
+                  className="form-input"
+                >
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic (Claude)</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Model Name</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={modelInput}
+                  onChange={(e) => setModelInput(e.target.value)}
+                  placeholder={providerInput === 'openai' ? 'gpt-4-turbo-preview or gpt-4o' : 'claude-3-5-sonnet-20241022'}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>
+                  {providerInput === 'openai' ? 'OpenAI API Key' : 'Anthropic API Key'}
+                  {llmConfig?.has_api_key && (
+                    <span style={{ color: 'var(--success)', marginLeft: '8px', fontSize: '0.8rem' }}>
+                      (Active: {llmConfig.masked_key})
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="password"
+                  className="form-input"
+                  placeholder={llmConfig?.has_api_key ? 'Enter new key to replace existing...' : 'sk-...'}
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                />
+                <small style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '4px', display: 'block' }}>
+                  💡 <strong>Tip:</strong> If you leave this empty, the agent runs in <strong>Autonomous Heuristic Mode</strong> with full access to local filesystem, git, database, and Python sandbox without requiring any paid API keys!
+                </small>
+              </div>
+
+              <div className="modal-actions" style={{ marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => setShowConfigModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-submit"
+                  disabled={isSavingConfig}
+                >
+                  {isSavingConfig ? 'Saving...' : 'Save & Activate'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Interactive Command Center / Prompt Console */}
       <section className="command-console">
