@@ -76,6 +76,9 @@ const FREE_LLM_PRESETS = [
   }
 ];
 
+const API_BASE = process.env.REACT_APP_API_URL || '';
+const WS_BASE = process.env.REACT_APP_WS_URL || (process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace(/^http/, 'ws') + '/ws' : 'ws://localhost:8000/ws');
+
 function App() {
   const [agentStatus, setAgentStatus] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -99,11 +102,11 @@ function App() {
   const [activeTab, setActiveTab] = useState('overview');
 
   // WebSocket connection for real-time updates
-  const { data: wsData, isConnected: wsConnected } = useWebSocket('ws://localhost:8000/ws');
+  const { data: wsData, isConnected: wsConnected } = useWebSocket(WS_BASE);
 
   const fetchConfig = async () => {
     try {
-      const res = await fetch('/api/agent/config');
+      const res = await fetch(`${API_BASE}/api/agent/config`);
       if (res.ok) {
         const data = await res.json();
         setLlmConfig(data);
@@ -141,7 +144,7 @@ function App() {
         payload.api_key = ''; // Clear key for autonomous/local
       }
 
-      const res = await fetch('/api/agent/config', {
+      const res = await fetch(`${API_BASE}/api/agent/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -212,7 +215,7 @@ function App() {
 
   const fetchAgentStatus = async () => {
     try {
-      const response = await fetch('/api/agent/status');
+      const response = await fetch(`${API_BASE}/api/agent/status`);
       if (response.ok) {
         const data = await response.json();
         setAgentStatus(data);
@@ -227,7 +230,7 @@ function App() {
 
   const fetchTasks = async () => {
     try {
-      const response = await fetch('/api/tasks/');
+      const response = await fetch(`${API_BASE}/api/tasks/`);
       if (response.ok) {
         const data = await response.json();
         setTasks(data.tasks || []);
@@ -239,7 +242,7 @@ function App() {
 
   const fetchMemoryStats = async () => {
     try {
-      const response = await fetch('/api/memory/stats');
+      const response = await fetch(`${API_BASE}/api/memory/stats`);
       if (response.ok) {
         const data = await response.json();
         setMemoryStats(data);
@@ -251,7 +254,7 @@ function App() {
 
   const fetchLearningStats = async () => {
     try {
-      const response = await fetch('/api/agent/status');
+      const response = await fetch(`${API_BASE}/api/agent/status`);
       if (response.ok) {
         const data = await response.json();
         if (data.stats?.learning) {
@@ -272,7 +275,7 @@ function App() {
     setExecutionResult(null);
 
     try {
-      const response = await fetch('/api/agent/execute', {
+      const response = await fetch(`${API_BASE}/api/agent/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task: query.trim() })
@@ -308,7 +311,7 @@ function App() {
 
   // Add Task to Pipeline
   const handleAddTask = async (taskData) => {
-    const response = await fetch('/api/tasks/', {
+    const response = await fetch(`${API_BASE}/api/tasks/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(taskData)
@@ -322,7 +325,7 @@ function App() {
   const handleResetAgent = async () => {
     if (!window.confirm('Reset agent memory and runtime states?')) return;
     try {
-      await fetch('/api/agent/reset', { method: 'POST' });
+      await fetch(`${API_BASE}/api/agent/reset`, { method: 'POST' });
       await fetchAllData();
       setExecutionResult(null);
     } catch (err) {
