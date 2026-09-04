@@ -1,0 +1,16 @@
+{
+  "name": "self-learning-agent",
+  "version": "1.0.0",
+  "description": "Self-Learning AI Agent Full Stack Project",
+  "scripts": {
+    "start": "concurrently -k -n backend,frontend -c blue,green \"npm run backend\" \"npm run frontend\"",
+    "dev": "npm start",
+    "backend": "python -u -m uvicorn api.main:app --host 0.0.0.0 --port 8000",
+    "frontend": "npm --prefix frontend start",
+    "install:all": "npm install && cd frontend && npm install",
+    "build": "npm --prefix frontend run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
