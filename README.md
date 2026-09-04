@@ -3,6 +3,7 @@ URL: https://self-learning-ai-agent-one.vercel.app
 
 <div align="center">
 
+[![Vercel Deployment](https://img.shields.io/badge/Vercel-Live%20Demo-000000?style=flat-square&logo=vercel)](https://self-learning-ai-agent-one.vercel.app/)
 ![GitHub Workflow Status](https://img.shields.io/badge/build-passing-brightgreen?style=flat-square)
 ![Python Version](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.14-blue?style=flat-square)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688?style=flat-square&logo=fastapi)
@@ -13,7 +14,9 @@ URL: https://self-learning-ai-agent-one.vercel.app
 
 **An autonomous AI system that reasons, plans, executes tools, evaluates its own performance, and self-evolves across iterations using multi-tiered memory architectures.**
 
-[Live Dashboard](#-cyber-glassmorphic-dashboard) • [Quick Start](#-quick-start) • [Architecture](#-core-architecture) • [Memory Systems](#-multi-tiered-memory-hierarchy) • [Free LLM Setup](#-flexible-llm-providers--free-tier-support) • [API Docs](#-api-endpoints)
+### 🌐 [Live Production Demo: https://self-learning-ai-agent-one.vercel.app](https://self-learning-ai-agent-one.vercel.app/)
+
+[Live Demo ↗](https://self-learning-ai-agent-one.vercel.app/) • [Overview](#-overview-showcase) • [Quick Start](#-quick-start) • [Architecture](#-core-architecture) • [Memory Systems](#-multi-tiered-memory-hierarchy) • [Free LLM Setup](#-flexible-llm-providers--free-tier-support) • [API Docs](#-api-endpoints)
 
 ---
 
@@ -272,6 +275,7 @@ self-learning-agent/
 │   ├── database.py          # Relational SQL diagnostic tool
 │   └── web_search.py        # DuckDuckGo & search engine client
 ├── package.json             # Root orchestration (concurrently runner)
+├── vercel.json              # Vercel production deployment & routing configuration
 ├── requirements.txt         # Python dependencies
 └── .env                     # Local environment & LLM configuration
 ```
