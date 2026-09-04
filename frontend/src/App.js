@@ -8,9 +8,72 @@ import './App.css';
 
 const SUGGESTED_PROMPTS = [
   "Analyze current memory state and summarize active subsystems",
-  "Research autonomous agent architectures using web search",
-  "Plan and decompose a multi-step data processing workflow",
+  "Inspect Git repository commit history and current working branch",
+  "Scan local directory structure and summarize key components",
   "Execute a Python benchmark for matrix multiplication algorithms"
+];
+
+const FREE_LLM_PRESETS = [
+  {
+    id: 'autonomous',
+    name: '⚡ Built-in Autonomous Engine (100% Free, No Key Required)',
+    provider: 'openai',
+    model: 'autonomous-heuristic-v1',
+    baseUrl: '',
+    portalUrl: '',
+    keyPlaceholder: 'Leave empty - runs on local tools',
+    desc: 'Uses local Python sandbox, Git tools, SQLite, and Vector memory with zero external dependencies.'
+  },
+  {
+    id: 'groq',
+    name: '🚀 Groq Cloud (Free & Ultra-Fast Llama 3.3 70B)',
+    provider: 'openai',
+    model: 'llama-3.3-70b-versatile',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    portalUrl: 'https://console.groq.com/keys',
+    keyPlaceholder: 'gsk_...',
+    desc: 'Free tier with instant setup and ultra-low latency. Generates in < 1 second.'
+  },
+  {
+    id: 'gemini',
+    name: '✨ Google Gemini 1.5 Flash (Free Tier)',
+    provider: 'openai',
+    model: 'gemini-1.5-flash',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    portalUrl: 'https://aistudio.google.com/app/apikey',
+    keyPlaceholder: 'AIzaSy...',
+    desc: 'Free 1,500 requests/day directly from Google AI Studio without credit card.'
+  },
+  {
+    id: 'openrouter',
+    name: '🌐 OpenRouter (Free Tier Models)',
+    provider: 'openai',
+    model: 'meta-llama/llama-3.3-70b-instruct:free',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    portalUrl: 'https://openrouter.ai/keys',
+    keyPlaceholder: 'sk-or-v1-...',
+    desc: 'Access free open-source models with no upfront payment required.'
+  },
+  {
+    id: 'ollama',
+    name: '💻 Ollama Local (100% Offline & Private)',
+    provider: 'openai',
+    model: 'llama3.2',
+    baseUrl: 'http://localhost:11434/v1',
+    portalUrl: 'https://ollama.com',
+    keyPlaceholder: 'Leave empty (not needed for local Ollama)',
+    desc: 'Runs completely on your local computer via Ollama.'
+  },
+  {
+    id: 'openai',
+    name: '🤖 OpenAI Platform (Official)',
+    provider: 'openai',
+    model: 'gpt-4o-mini',
+    baseUrl: '',
+    portalUrl: 'https://platform.openai.com/api-keys',
+    keyPlaceholder: 'sk-proj-...',
+    desc: 'Official OpenAI GPT models (requires OpenAI account).'
+  }
 ];
 
 function App() {
@@ -22,9 +85,11 @@ function App() {
   // LLM Config state
   const [llmConfig, setLlmConfig] = useState({ provider: 'openai', model: 'gpt-4-turbo-preview', has_api_key: false });
   const [showConfigModal, setShowConfigModal] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState('autonomous');
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [providerInput, setProviderInput] = useState('openai');
   const [modelInput, setModelInput] = useState('gpt-4-turbo-preview');
+  const [baseUrlInput, setBaseUrlInput] = useState('');
   const [isSavingConfig, setIsSavingConfig] = useState(false);
 
   // Interactive Agent Console state
@@ -44,9 +109,20 @@ function App() {
         setLlmConfig(data);
         setProviderInput(data.provider || 'openai');
         setModelInput(data.model || 'gpt-4-turbo-preview');
+        setBaseUrlInput(data.base_url || '');
       }
     } catch (e) {
       console.warn('Config fetch error:', e);
+    }
+  };
+
+  const handleSelectPreset = (presetId) => {
+    setSelectedPreset(presetId);
+    const preset = FREE_LLM_PRESETS.find(p => p.id === presetId);
+    if (preset) {
+      setProviderInput(preset.provider);
+      setModelInput(preset.model);
+      setBaseUrlInput(preset.baseUrl);
     }
   };
 
@@ -56,11 +132,15 @@ function App() {
     try {
       const payload = {
         provider: providerInput,
-        model: modelInput
+        model: modelInput,
+        base_url: baseUrlInput.trim() || null
       };
       if (apiKeyInput.trim()) {
         payload.api_key = apiKeyInput.trim();
+      } else if (selectedPreset === 'autonomous' || selectedPreset === 'ollama') {
+        payload.api_key = ''; // Clear key for autonomous/local
       }
+
       const res = await fetch('/api/agent/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -291,39 +371,89 @@ function App() {
       {/* LLM Settings Modal */}
       {showConfigModal && (
         <div className="modal-backdrop" onClick={() => setShowConfigModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '580px' }}>
             <div className="modal-header">
-              <h3>⚙️ AI Model & API Key Configuration</h3>
+              <h3>⚙️ AI Model & Free API Key Configuration</h3>
               <button className="btn-close" onClick={() => setShowConfigModal(false)}>✕</button>
             </div>
 
             <form onSubmit={handleSaveConfig} className="task-form">
               <div className="form-group">
-                <label>Provider</label>
+                <label>Select AI Engine / Free Provider Preset</label>
                 <select
-                  value={providerInput}
-                  onChange={(e) => setProviderInput(e.target.value)}
+                  value={selectedPreset}
+                  onChange={(e) => handleSelectPreset(e.target.value)}
                   className="form-input"
+                  style={{ fontWeight: 600, color: 'var(--primary-glow)' }}
                 >
-                  <option value="openai">OpenAI</option>
-                  <option value="anthropic">Anthropic (Claude)</option>
+                  {FREE_LLM_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
                 </select>
+                {(() => {
+                  const curr = FREE_LLM_PRESETS.find(p => p.id === selectedPreset);
+                  if (!curr) return null;
+                  return (
+                    <div style={{ marginTop: '8px', fontSize: '0.82rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.03)', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                      <p style={{ margin: '0 0 6px 0' }}>{curr.desc}</p>
+                      {curr.portalUrl && (
+                        <a
+                          href={curr.portalUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: '#38bdf8', textDecoration: 'underline', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          👉 Get your free key here: {curr.portalUrl} ↗
+                        </a>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
-              <div className="form-group">
-                <label>Model Name</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={modelInput}
-                  onChange={(e) => setModelInput(e.target.value)}
-                  placeholder={providerInput === 'openai' ? 'gpt-4-turbo-preview or gpt-4o' : 'claude-3-5-sonnet-20241022'}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label>Provider Type</label>
+                  <select
+                    value={providerInput}
+                    onChange={(e) => setProviderInput(e.target.value)}
+                    className="form-input"
+                  >
+                    <option value="openai">OpenAI / Compatible</option>
+                    <option value="anthropic">Anthropic (Claude)</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Model Identifier</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={modelInput}
+                    onChange={(e) => setModelInput(e.target.value)}
+                    placeholder="llama-3.3-70b-versatile"
+                  />
+                </div>
               </div>
+
+              {baseUrlInput && (
+                <div className="form-group">
+                  <label>API Base URL</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={baseUrlInput}
+                    onChange={(e) => setBaseUrlInput(e.target.value)}
+                    placeholder="https://api.groq.com/openai/v1"
+                  />
+                </div>
+              )}
 
               <div className="form-group">
                 <label>
-                  {providerInput === 'openai' ? 'OpenAI API Key' : 'Anthropic API Key'}
+                  API Key
                   {llmConfig?.has_api_key && (
                     <span style={{ color: 'var(--success)', marginLeft: '8px', fontSize: '0.8rem' }}>
                       (Active: {llmConfig.masked_key})
@@ -333,12 +463,12 @@ function App() {
                 <input
                   type="password"
                   className="form-input"
-                  placeholder={llmConfig?.has_api_key ? 'Enter new key to replace existing...' : 'sk-...'}
+                  placeholder={FREE_LLM_PRESETS.find(p => p.id === selectedPreset)?.keyPlaceholder || 'Paste API Key here...'}
                   value={apiKeyInput}
                   onChange={(e) => setApiKeyInput(e.target.value)}
                 />
                 <small style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '4px', display: 'block' }}>
-                  💡 <strong>Tip:</strong> If you leave this empty, the agent runs in <strong>Autonomous Heuristic Mode</strong> with full access to local filesystem, git, database, and Python sandbox without requiring any paid API keys!
+                  💡 <strong>Tip:</strong> If left empty, the agent runs in <strong>Autonomous Mode</strong> with local tools (Filesystem, Git, Database, and Python) without requiring any paid API keys!
                 </small>
               </div>
 

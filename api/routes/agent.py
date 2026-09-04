@@ -255,6 +255,7 @@ class ConfigUpdateRequest(BaseModel):
     api_key: Optional[str] = None
     provider: Optional[str] = None
     model: Optional[str] = None
+    base_url: Optional[str] = None
 
 
 @router.get("/config")
@@ -274,6 +275,7 @@ async def get_agent_config():
         return {
             "provider": provider_name,
             "model": cfg.model,
+            "base_url": cfg.base_url,
             "has_api_key": has_key,
             "masked_key": masked if has_key else None
         }
@@ -284,7 +286,7 @@ async def get_agent_config():
 
 @router.post("/config")
 async def update_agent_config(request: ConfigUpdateRequest):
-    """Update LLM provider, model, or API key dynamically."""
+    """Update LLM provider, model, base_url, or API key dynamically."""
     try:
         import os
         from api.main import app
@@ -301,6 +303,10 @@ async def update_agent_config(request: ConfigUpdateRequest):
         if request.model:
             cfg.model = request.model.strip()
 
+        if request.base_url is not None:
+            clean_base = request.base_url.strip()
+            cfg.base_url = clean_base if clean_base else None
+
         if request.api_key is not None:
             clean_key = request.api_key.strip()
             cfg.api_key = clean_key
@@ -311,7 +317,7 @@ async def update_agent_config(request: ConfigUpdateRequest):
 
         # Re-initialize Brain with the updated configuration
         app.state.brain = Brain(cfg)
-        logger.info(f"Agent Brain re-initialized with provider={cfg.provider}, model={cfg.model}, has_key={bool(cfg.api_key)}")
+        logger.info(f"Agent Brain re-initialized with provider={cfg.provider}, model={cfg.model}, base_url={cfg.base_url}, has_key={bool(cfg.api_key)}")
 
         return await get_agent_config()
     except Exception as e:

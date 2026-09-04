@@ -61,7 +61,8 @@ async def lifespan(app: FastAPI):
         model=os.getenv("LLM_MODEL", "gpt-4-turbo-preview"),
         api_key=os.getenv("OPENAI_API_KEY", ""),
         max_tokens=int(os.getenv("MAX_TOKENS", "4000")),
-        temperature=float(os.getenv("TEMPERATURE", "0.7"))
+        temperature=float(os.getenv("TEMPERATURE", "0.7")),
+        base_url=os.getenv("LLM_BASE_URL", None)
     )
 
     app.state.brain = Brain(app.state.llm_config)
